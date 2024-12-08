@@ -14,21 +14,33 @@ grid =
   |> Enum.reduce(%{}, fn {char, i, j}, grid -> Map.put(grid, {i, j}, char) end)
 
 defmodule Antenna do
-  def resonant_positions({x1, y1}, {x2, y2}) do
+  def resonant_positions(grid, {x1, y1}, {x2, y2}) do
     {dx, dy} = {x2 - x1, y2 - y1}
+    gcd = GCD.gcd(dx, dy)
+    {dx, dy} = {div(dx, gcd), div(dy, gcd)}
 
-    outer_positions = [{x2 + dx, y2 + dy}, {x1 - dx, y1 - dy}]
+    positions = iter(grid, {x1, y1}, {dx, dy}, []) ++ iter(grid, {x1, y1}, {-dx, -dy}, [])
+    positions
+  end
 
-    inner_positions =
-      if rem(dx, 3) == 0 and rem(dy, 3) == 0 do
-        dx_third = div(dx, 3)
-        dy_third = div(dy, 3)
-        [{x1 + dx_third, y1 + dy_third}, {x2 - dx_third, y2 - dy_third}]
-      else
-        []
-      end
+  def iter(grid, {x, y} = pos, {dx, dy}, acc) do
+    if Map.has_key?(grid, pos) do
+      new_pos = {x + dx, y + dy}
+      iter(grid, new_pos, {dx, dy}, [{x, y} | acc])
+    else
+      acc
+    end
+  end
+end
 
-    outer_positions ++ inner_positions
+defmodule GCD do
+  # euclid's algorithm
+  def gcd(a, 0) do
+    abs(a)
+  end
+
+  def gcd(a, b) do
+    gcd(b, rem(a, b))
   end
 end
 
@@ -50,12 +62,10 @@ positions =
           do: {p1, p2}
 
     Enum.reduce(antenna_pairs, [], fn {p1, p2}, acc ->
-      Antenna.resonant_positions(p1, p2) ++ acc
+      Antenna.resonant_positions(grid, p1, p2) ++ acc
     end)
   end)
   |> List.flatten()
-  |> Enum.filter(fn position -> Map.has_key?(grid, position) end)
   |> Enum.uniq()
 
-# IO.inspect(positions)
 IO.inspect(length(positions))
