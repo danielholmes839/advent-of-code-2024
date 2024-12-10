@@ -13,12 +13,6 @@ grid =
   |> List.flatten()
   |> Enum.reduce(%{}, fn {char, i, j}, grid -> Map.put(grid, {i, j}, String.to_integer(char)) end)
 
-g = :digraph.new()
-
-Enum.each(grid, fn {position, num} ->
-  :digraph.add_vertex(g, position, num)
-end)
-
 edges =
   grid
   |> Enum.map(fn {{x, y} = origin_pos, _} ->
@@ -33,20 +27,41 @@ edges =
   end)
   |> List.flatten()
 
-edges
-|> Enum.each(fn {origin_pos, neighbour_pos} -> :digraph.add_edge(g, origin_pos, neighbour_pos) end)
+edge_map =
+  Enum.reduce(edges, %{}, fn {origin, neighbour}, g ->
+    case Map.get(g, origin) do
+      nil -> Map.put(g, origin, [neighbour])
+      neighbours -> Map.put(g, origin, [neighbour | neighbours])
+    end
+  end)
 
-# IO.inspect(edges |> Enum.map(fn {a, b} -> {Map.get(grid, a), Map.get(grid, b)} end))
+# IO.inspect(edge_map)
+
+defmodule Explore do
+  def distinct(grid, edge_map, origin) do
+    num = Map.get(grid, origin)
+
+    cond do
+      num == 9 ->
+        1
+
+      true ->
+        Map.get(edge_map, origin, [])
+        |> Enum.map(fn neighbour ->
+          distinct(grid, edge_map, neighbour)
+        end)
+        |> Enum.sum()
+    end
+  end
+end
 
 sum =
   grid
   |> Enum.filter(fn {_position, val} -> val == 0 end)
   |> Enum.map(fn {position, _} ->
-    :digraph_utils.reachable([position], g)
-    |> Enum.filter(fn position -> Map.get(grid, position) == 9 end)
-    |> Enum.count()
+    Explore.distinct(grid, edge_map, position)
   end)
   |> Enum.sum()
 
-IO.inspect(:digraph_utils.reachable([{0, 0}], g))
+# IO.inspect(:digraph_utils.reachable([{0, 0}], g))
 IO.inspect(sum)
