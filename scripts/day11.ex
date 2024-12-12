@@ -4,49 +4,48 @@ stones =
   |> Enum.map(&String.to_integer/1)
 
 defmodule Stones do
-  def blink_many(stones, n) do
-    Enum.reduce(1..n, stones, fn i, curr ->
-      IO.puts(i)
-
-      Enum.reduce(curr, [], fn stone, new_stones ->
-        case blink(stone) do
-          {left_val, right_val} -> [right_val, left_val | new_stones]
-          new_val -> [new_val | new_stones]
-        end
-      end)
-      |> Enum.reverse()
+  def blink_many(stones, depth) do
+    stones
+    |> Enum.map(fn stone ->
+      {n, _} = blink(%{}, stone, depth)
+      n
     end)
+    |> Enum.sum()
   end
 
-  def blink(stone) do
+  def blink(table, stone, depth) do
     cond do
-      stone == 0 ->
-        1
+      Map.has_key?(table, {stone, depth}) ->
+        {Map.get(table, {stone, depth}), table}
 
-      rem(digits(stone, 0), 2) == 0 ->
-        split(stone)
+      depth == 0 ->
+        {1, table}
+
+      stone == 0 ->
+        {n, table} = blink(table, 1, depth - 1)
+        {n, Map.put(table, {stone, depth}, n)}
+
+      rem(digits(stone), 2) == 0 ->
+        {left_stone, right_stone} = split(stone)
+        {ln, table} = blink(table, left_stone, depth - 1)
+        {rn, table} = blink(table, right_stone, depth - 1)
+        {ln + rn, Map.put(table, {stone, depth}, ln + rn)}
 
       true ->
-        stone * 2024
+        {n, table} = blink(table, stone * 2024, depth - 1)
+        {n, Map.put(table, {stone, depth}, n)}
     end
   end
 
-  defp digits(stone, acc) do
-    if stone == 0 do
-      max(acc, 1)
-    else
-      quotient = div(stone, 10)
-      digits(quotient, acc + 1)
-    end
+  defp digits(stone) do
+    Integer.to_charlist(stone) |> length
   end
 
   defp split(stone) do
-    d = digits(stone, 0)
+    d = digits(stone)
     divisor = 10 ** div(d, 2)
     {div(stone, divisor), rem(stone, divisor)}
   end
 end
 
-# IO.inspect([1001, 1000, 999, 100, 99, 1, 0] |> Enum.map(fn stone -> Stones.blink(stone) end))
-
-IO.inspect(Stones.blink_many(stones, 75) |> Enum.count())
+IO.inspect(Stones.blink_many(stones, 25))
