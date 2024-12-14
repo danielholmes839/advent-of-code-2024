@@ -33,23 +33,77 @@ defmodule Measure do
     end
   end
 
-  def fence(grid, {x, y}) do
-    plant = Map.get(grid, {x, y})
+  def edges(region) do
+    region_map = region |> Enum.map(fn position -> {position, true} end) |> Enum.into(%{})
 
-    [{0, 1}, {0, -1}, {1, 0}, {-1, 0}]
-    |> Enum.map(fn {dx, dy} ->
-      neighbour_plant = Map.get(grid, {x + dx, y + dy})
+    region_by_edge =
+      [{0, 1}, {0, -1}, {1, 0}, {-1, 0}]
+      |> Enum.map(fn {dx, dy} ->
+        {{dx, dy},
+         region |> Enum.filter(fn {x, y} -> !Map.has_key?(region_map, {x + dx, y + dy}) end)}
+      end)
 
-      cond do
-        neighbour_plant == plant ->
-          0
-
-        true ->
-          1
-      end
+    region_by_edge
+    |> Enum.map(fn {_, positions} ->
+      edge_groups(positions)
     end)
     |> Enum.sum()
   end
+
+  def edge_groups(positions) do
+    positions_map = positions |> Enum.map(fn position -> {position, true} end) |> Enum.into(%{})
+
+    directions = [{0, 1}, {0, -1}, {1, 0}, {-1, 0}]
+
+    g = :digraph.new()
+
+    positions |> Enum.each(fn position -> :digraph.add_vertex(g, position) end)
+
+    positions
+    |> Enum.each(fn {x, y} ->
+      Enum.each(directions, fn {dx, dy} ->
+        if Map.has_key?(positions_map, {x + dx, y + dy}) do
+          :digraph.add_edge(g, {x, y}, {x + dx, y + dy})
+        end
+      end)
+    end)
+
+    length(:digraph_utils.strong_components(g))
+
+    # {_, acc} =
+    #   Enum.reduce(positions, {positions_map, 0}, fn position, {remaining, acc} ->
+    #     if !Map.has_key?(remaining, position) do
+    #       {remaining, acc}
+    #     else
+    #       remaining = explore_edge(position, remaining)
+    #       {remaining, acc + 1}
+    #     end
+    #   end)
+
+    # acc
+  end
+
+  # def explore_edge(position, remaining) do
+  #   remaining = Enum.reduce_while()
+  # end
+
+  # def fence(grid, {x, y}) do
+  #   plant = Map.get(grid, {x, y})
+
+  #   [{0, 1}, {0, -1}, {1, 0}, {-1, 0}]
+  #   |> Enum.map(fn {dx, dy} ->
+  #     neighbour_plant = Map.get(grid, {x + dx, y + dy})
+
+  #     cond do
+  #       neighbour_plant == plant ->
+  #         0
+
+  #       true ->
+  #         1
+  #     end
+  #   end)
+  #   |> Enum.sum()
+  # end
 end
 
 {_, regions} =
@@ -66,12 +120,10 @@ end
 
 sum =
   regions
-  |> Enum.map(fn {_, positions} ->
-    perimeter =
-      positions |> Enum.map(fn position -> Measure.fence(grid, position) end) |> Enum.sum()
-
-    area = length(positions)
-    area * perimeter
+  |> Enum.map(fn {_, region} ->
+    edges = Measure.edges(region)
+    area = length(region)
+    area * edges
   end)
   |> Enum.sum()
 
