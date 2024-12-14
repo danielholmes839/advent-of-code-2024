@@ -69,41 +69,7 @@ defmodule Measure do
     end)
 
     length(:digraph_utils.strong_components(g))
-
-    # {_, acc} =
-    #   Enum.reduce(positions, {positions_map, 0}, fn position, {remaining, acc} ->
-    #     if !Map.has_key?(remaining, position) do
-    #       {remaining, acc}
-    #     else
-    #       remaining = explore_edge(position, remaining)
-    #       {remaining, acc + 1}
-    #     end
-    #   end)
-
-    # acc
   end
-
-  # def explore_edge(position, remaining) do
-  #   remaining = Enum.reduce_while()
-  # end
-
-  # def fence(grid, {x, y}) do
-  #   plant = Map.get(grid, {x, y})
-
-  #   [{0, 1}, {0, -1}, {1, 0}, {-1, 0}]
-  #   |> Enum.map(fn {dx, dy} ->
-  #     neighbour_plant = Map.get(grid, {x + dx, y + dy})
-
-  #     cond do
-  #       neighbour_plant == plant ->
-  #         0
-
-  #       true ->
-  #         1
-  #     end
-  #   end)
-  #   |> Enum.sum()
-  # end
 end
 
 {_, regions} =
