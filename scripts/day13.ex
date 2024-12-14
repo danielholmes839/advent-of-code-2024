@@ -1,16 +1,15 @@
 defmodule Solver do
-  def solve(combinations, a, b, {target_x, target_y}) do
-    combinations
-    |> Enum.map(fn {a_click, b_click} ->
-      x = a.xinc * a_click + b.xinc * b_click
-      y = a.yinc * a_click + b.yinc * b_click
-      cost = a.cost * a_click + b.cost * b_click
+  def solve(a, b, {target_x, target_y}) do
+    dividend = b.xinc * target_y - b.yinc * target_x
+    divisor = b.xinc * a.yinc - b.yinc * a.xinc
 
-      {x, y, cost}
-    end)
-    |> Enum.filter(fn {x, y, _} -> x == target_x and y == target_y end)
-    |> Enum.map(fn {_, _, cost} -> cost end)
-    |> Enum.min(fn -> 0 end)
+    if rem(dividend, divisor) == 0 do
+      a_press = div(dividend, divisor)
+      b_press = div(target_y - a_press * a.yinc, b.yinc)
+      {a_press, b_press}
+    else
+      nil
+    end
   end
 
   def parse_button(button) do
@@ -58,23 +57,19 @@ machines =
     }
   end)
 
-combinations =
-  Enum.map(0..100, fn a_click ->
-    Enum.map(0..100, fn b_click -> {a_click, b_click} end)
-  end)
-  |> List.flatten()
-
-# IO.inspect(machines)
-
 cost =
-  Enum.map(machines, fn {button_a, button_b, target} ->
-    Solver.solve(
-      combinations,
-      button_a,
-      button_b,
-      target
-    )
-  end)
+  Enum.map(
+    machines,
+    fn {btn_a, btn_b, {target_x, target_y}} ->
+      Solver.solve(
+        btn_a,
+        btn_b,
+        {target_x + 10_000_000_000_000, target_y + 10_000_000_000_000}
+      )
+    end
+  )
+  |> Enum.filter(fn res -> res != nil end)
+  |> Enum.map(fn {a, b} -> 3 * a + b end)
   |> Enum.sum()
 
 IO.inspect(cost)
