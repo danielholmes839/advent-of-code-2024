@@ -11,6 +11,10 @@ directions = %{
 
 grid =
   grid
+  |> String.replace("#", "##")
+  |> String.replace("O", "[]")
+  |> String.replace(".", "..")
+  |> String.replace("@", "@.")
   |> String.split("\n")
   |> Enum.with_index()
   |> Enum.map(fn {line, lineNum} ->
@@ -36,38 +40,85 @@ defmodule Day15 do
       Enum.reduce(moves, {grid, robot}, &reduce_move/2)
 
     grid
-    |> Enum.filter(fn {_, char} -> char == "O" end)
+    |> Enum.filter(fn {_, char} -> char == "[" end)
     |> Enum.map(fn {{x, y}, _} -> y * 100 + x end)
     |> Enum.sum()
   end
 
-  def move?(grid, {x, y}, {dx, dy}) do
-    case Map.get(grid, {x, y}) do
-      "@" -> move?(grid, {x + dx, y + dy}, {dx, dy})
-      "O" -> move?(grid, {x + dx, y + dy}, {dx, dy})
-      "." -> true
-      "#" -> false
+  def get_moves(grid, false, {x, y} = pos, {dx, dy} = dir) do
+    false
+  end
+
+  def get_moves(grid, moves, {x, y}, {dx, dy} = dir) do
+    char = Map.get(grid, {x, y})
+
+    if Map.has_key?(moves, {x, y}) do
+      moves
+    else
+      case {char, dy} do
+        {"@", _} ->
+          moves = Map.put(moves, {x, y}, char)
+          get_moves(grid, moves, {x + dx, y + dy}, dir)
+
+        {"#", _} ->
+          false
+
+        {".", _} ->
+          moves
+
+        {"[", 0} ->
+          moves = Map.put(moves, {x, y}, char)
+          get_moves(grid, moves, {x + dx, y + dy}, dir)
+
+        {"]", 0} ->
+          moves = Map.put(moves, {x, y}, char)
+          get_moves(grid, moves, {x + dx, y + dy}, dir)
+
+        {"[", _} ->
+          moves = Map.put(moves, {x, y}, char)
+          moves = get_moves(grid, moves, {x + dx, y + dy}, dir)
+          moves = get_moves(grid, moves, {x + 1, y}, dir)
+          moves
+
+        {"]", _} ->
+          moves = Map.put(moves, {x, y}, char)
+          moves = get_moves(grid, moves, {x + dx, y + dy}, dir)
+          moves = get_moves(grid, moves, {x - 1, y}, dir)
+          moves
+      end
     end
   end
 
   def reduce_move({dx, dy} = direction, {grid, {x, y} = robot}) do
-    if move?(grid, robot, direction) do
-      grid = move(grid, robot, direction, ".")
-      {grid, {x + dx, y + dy}}
-    else
-      # can't move
-      {grid, robot}
-    end
-  end
+    case get_moves(grid, %{}, robot, direction) do
+      false ->
+        {grid, robot}
 
-  def move(grid, {x, y}, {dx, dy}, replace_char) do
-    char = Map.get(grid, {x, y})
-    grid = Map.put(grid, {x, y}, replace_char)
+      moves ->
+        # IO.puts("--------------")
+        # IO.inspect(moves)
 
-    if char == "." do
-      grid
-    else
-      move(grid, {x + dx, y + dy}, {dx, dy}, char)
+        # IO.inspect(
+        #   Enum.group_by(grid, fn {_, k} -> k end)
+        #   |> Enum.map(fn {k, arr} -> {k, length(arr)} end)
+        #   |> Enum.into(%{})
+        # )
+
+        grid =
+          Enum.reduce(moves, grid, fn {{x, y}, char}, acc ->
+            acc = Map.put(acc, {x + dx, y + dy}, char)
+            prev = Map.get(moves, {x - dx, y - dy})
+
+            cond do
+              prev == nil ->
+                Map.put(acc, {x, y}, ".")
+
+              true ->
+                Map.put(acc, {x, y}, prev)
+            end
+          end)
+
+        {grid, {x + dx, y + dy}}
     end
   end
 end
