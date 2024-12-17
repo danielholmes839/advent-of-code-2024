@@ -1,4 +1,4 @@
-{:ok, contents} = File.read("data/day16_example.txt")
+{:ok, contents} = File.read("data/day16.txt")
 
 grid =
   contents
@@ -21,9 +21,71 @@ defmodule Day16 do
     east = {1, 0}
     costs = explore(grid, %{}, start, east, 0)
 
-    [{1, 0}, {0, 1}, {-1, 0}, {0, -1}]
-    |> Enum.map(fn direction -> Map.get(costs, {target, direction}) end)
-    |> Enum.min()
+    min_cost =
+      [{1, 0}, {0, 1}, {-1, 0}, {0, -1}]
+      |> Enum.map(fn direction -> Map.get(costs, {target, direction}) end)
+      |> Enum.min()
+
+    IO.puts(min_cost)
+
+    tiles =
+      [{1, 0}, {0, 1}, {-1, 0}, {0, -1}]
+      |> Enum.map(fn direction ->
+        cost = Map.get(costs, {target, direction})
+        {cost, direction}
+      end)
+      |> Enum.filter(fn {cost, _direction} -> cost == min_cost end)
+      |> Enum.map(fn {_, direction} -> backtrack(costs, %{}, target, direction, min_cost) end)
+      |> Enum.reduce(&Map.merge/2)
+      |> map_size()
+
+    IO.inspect(tiles)
+  end
+
+  def backtrack(costs, best, {x, y} = position, {dx, dy} = direction, expected_cost) do
+    if !Map.has_key?(costs, {position, direction}) or
+         Map.get(costs, {position, direction}) != expected_cost do
+      best
+    else
+      # IO.inspect(
+      #   {"backtracking", position, direction, expected_cost,
+      #    Map.get(costs, {position, direction})}
+      # )
+
+      best = Map.put(best, position, true)
+
+      cw_rotations = %{
+        # right > down
+        {1, 0} => {0, 1},
+        # down > left
+        {0, 1} => {-1, 0},
+        # left > up
+        {-1, 0} => {0, -1},
+        # up > right
+        {0, -1} => {1, 0}
+      }
+
+      ccw_rotations = %{
+        # down > right
+        {0, 1} => {1, 0},
+        # left > down
+        {-1, 0} => {0, 1},
+        # up > left
+        {0, -1} => {-1, 0},
+        # right > up
+        {1, 0} => {0, -1}
+      }
+
+      best = backtrack(costs, best, {x - dx, y - dy}, direction, expected_cost - 1)
+
+      best =
+        backtrack(costs, best, position, Map.get(ccw_rotations, direction), expected_cost - 1000)
+
+      best =
+        backtrack(costs, best, position, Map.get(cw_rotations, direction), expected_cost - 1000)
+
+      best
+    end
   end
 
   def explore(grid, costs, {x, y} = position, {dx, dy} = direction, cost) do
@@ -61,5 +123,4 @@ defmodule Day16 do
   end
 end
 
-cost = Day16.part1(grid)
-IO.puts(cost)
+Day16.part1(grid)
