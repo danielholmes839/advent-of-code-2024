@@ -1,31 +1,42 @@
 defmodule Day17 do
-  def step(program, iptr, register) do
+  def step(acc, program, iptr, register) do
     opcode = Map.get(program, iptr)
     operand = Map.get(program, iptr + 1)
 
-    # IO.inspect({iptr, register, {opcode, operand}})
-
-    if opcode == nil or operand == nil do
+    if opcode == nil do
       IO.inspect(register)
+      acc
     else
-      {{a, b, c}, iptr} =
+      {acc, {a, b, c}, iptr} =
         case op(opcode, operand, register) do
-          {new_register, new_iptr} -> {new_register, new_iptr}
-          new_register -> {new_register, iptr + 2}
+          {:out, combo_op} ->
+            IO.inspect(combo_op)
+
+            {
+              acc * 10 + combo_op,
+              register,
+              iptr + 2
+            }
+
+          {new_register, new_iptr} ->
+            {acc, new_register, new_iptr}
+
+          new_register ->
+            {acc, new_register, iptr + 2}
         end
 
-      step(program, iptr, {a, b, c})
+      step(acc, program, iptr, {a, b, c})
     end
   end
 
   def combo(operand, {a, b, c}) do
     cond do
+      operand <= 3 -> operand
       operand == 4 -> a
       operand == 5 -> b
       operand == 6 -> c
       # invalid
       operand == 7 -> exit("impossible!")
-      operand <= 3 -> operand
     end
   end
 
@@ -61,8 +72,7 @@ defmodule Day17 do
 
   def op(5, operand, register) do
     combo_op = combo(operand, register)
-    IO.puts(rem(combo_op, 8))
-    register
+    {:out, rem(combo_op, 8)}
   end
 
   def op(6, operand, {a, b, c}) do
@@ -79,9 +89,10 @@ defmodule Day17 do
 end
 
 program =
-  [0, 1, 5, 4, 3, 0]
+  [2, 4, 1, 2, 7, 5, 1, 7, 4, 4, 0, 3, 5, 5, 3, 0]
   |> Enum.with_index()
   |> Enum.map(fn {op, i} -> {i, op} end)
   |> Enum.into(%{})
 
-Day17.step(program, 0, {2024, 0, 0})
+acc = Day17.step(0, program, 0, {41_644_071, 0, 0})
+IO.inspect(acc |> Integer.to_string() |> String.graphemes() |> Enum.join(","))
